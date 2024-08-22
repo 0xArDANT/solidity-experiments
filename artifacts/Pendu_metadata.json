@@ -1,0 +1,168 @@
+{
+	"compiler": {
+		"version": "0.8.26+commit.8a97fa7a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "gameCount",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "games",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "launcher",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "challenger",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "lowerLimit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "upperLimit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "randomNumber",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum Pendu.Status",
+						"name": "status",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum Pendu.Winner",
+						"name": "winner",
+						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_gameId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_guessedNumber",
+						"type": "uint256"
+					}
+				],
+				"name": "guessTheCorrectNumber",
+				"outputs": [
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_player2Addr",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_lowerLimit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_upperLimit",
+						"type": "uint256"
+					}
+				],
+				"name": "intitializeGame",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "_playerName",
+						"type": "string"
+					}
+				],
+				"name": "setPlayerName",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"Pendu.sol": "Pendu"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"Pendu.sol": {
+			"keccak256": "0x554dfeeacdaf7a61d41dee6ace87df81da108e86e290d9af0e2478091680fb5a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://d9054c9417800f067cb230a9f2e093ddc589bc7b049a4d4c8d37070dd6f120d1",
+				"dweb:/ipfs/QmWsRzt4aRVfG1Kj1Rs3anQz5xXnAB3No9XF4McYwfF4XE"
+			]
+		}
+	},
+	"version": 1
+}
