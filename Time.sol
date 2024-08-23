@@ -14,7 +14,7 @@ contract Time {
     mapping (address => uint256) userLastCalls;
 
     function faucet() public payable {
-        require(block.timestamp > userLastCalls[msg.sender] + 1 minutes, "Please wait until the end of the freezing period");
+        require(block.timestamp > userLastCalls[msg.sender] + 1 days, "Please wait until the end of the freezing period");
         require(address(this).balance >= 1 ether, "The contract doesn't have enough funds");
         payable(msg.sender).transfer(1 ether);
         userLastCalls[msg.sender] = block.timestamp;

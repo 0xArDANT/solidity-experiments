@@ -6,6 +6,19 @@
 	"output": {
 		"abi": [
 			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_gameId",
+						"type": "uint256"
+					}
+				],
+				"name": "anotherGame",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
 				"inputs": [],
 				"name": "gameCount",
 				"outputs": [
@@ -109,7 +122,7 @@
 						"type": "uint256"
 					}
 				],
-				"name": "intitializeGame",
+				"name": "newGame",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
@@ -123,6 +136,29 @@
 					}
 				],
 				"name": "setPlayerName",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_gameId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_newLowerLimit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_newUpperLimit",
+						"type": "uint256"
+					}
+				],
+				"name": "updateGameIntervals",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
@@ -156,11 +192,11 @@
 	},
 	"sources": {
 		"Pendu.sol": {
-			"keccak256": "0x554dfeeacdaf7a61d41dee6ace87df81da108e86e290d9af0e2478091680fb5a",
+			"keccak256": "0xf1904751eddd400cc34239e69e320cd682c8d4bf734b4f77d786120d51718320",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://d9054c9417800f067cb230a9f2e093ddc589bc7b049a4d4c8d37070dd6f120d1",
-				"dweb:/ipfs/QmWsRzt4aRVfG1Kj1Rs3anQz5xXnAB3No9XF4McYwfF4XE"
+				"bzz-raw://6522228f63a711ffbb9edec5cb8354e639ed39cf66381bc2ee7d5bf69ca39a16",
+				"dweb:/ipfs/QmSWeTrn91VKVLtaTeVDN7mzz3TnJp3zAi9xpiGWiGeodz"
 			]
 		}
 	},
