@@ -268,11 +268,19 @@
 			]
 		},
 		"Pendu.sol": {
+<<<<<<< HEAD
 			"keccak256": "0xdaa4f51693af5b4c3c0623cbc24f0c8013aafe67ce7119e625df8673264bb78f",
 			"license": "MIT",
 			"urls": [
 				"bzz-raw://d04427e68ef00760b94049609ea009a36b2fefdcdcc279cc87169f474eae11d8",
 				"dweb:/ipfs/QmX6vjg1iB1XTsQG5NYuRMuif1y2fZpY5m5SFGHuGdrNch"
+=======
+			"keccak256": "0x1a7c6ec075cb6ab6346f1100b264e7648cee43fa3bb50166e988d3bba5b0a744",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://695408355f16f5a5dd948d6a30ec987f5d9b5ff3627caf9e503ea6b41636bde4",
+				"dweb:/ipfs/Qmf3YjGtbqgxLGmNZVJUTA3VsYfyXPhcfrwFisvJHS129n"
+>>>>>>> 26b2065e405b19942d771d5fd25ebd0ca5311607
 			]
 		}
 	},

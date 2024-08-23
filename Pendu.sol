@@ -130,7 +130,8 @@ contract Pendu {
         games[_gameId].amountToBet = _newAmount;
     }
 
-        //The users should pay before playing
+    
+    //The users should pay before playing
     function payToPlay(uint256 _gameId)
         public
         payable
@@ -148,6 +149,7 @@ contract Pendu {
         );
         playerHasPaid[msg.sender][_gameId] = true;
     }
+
 
     function guessTheCorrectNumber(uint256 _gameId, uint256 _guessedNumber)
         public
