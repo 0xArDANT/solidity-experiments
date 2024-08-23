@@ -24,12 +24,12 @@ contract Pendu {
 
     mapping(address => string) players;
     mapping(uint256 => Game) public games;
-    mapping(address => bool) isPlayer;
     mapping(uint256 => bool) isGame;
     mapping(address => mapping(uint256 => bool)) playerHasPaid;
-    mapping(address => uint256) balance;
+    mapping(uint256 => address) currentGamePlayer;
 
     enum Status {
+        INITIALIZED,
         ONGOING,
         FINISHED
     }
@@ -41,6 +41,30 @@ contract Pendu {
 
     modifier gameExist(uint256 _gameId) {
         require(isGame[_gameId], "The game doesn't exist !");
+        _;
+    }
+
+    modifier gameIsInitialized(uint256 _gameId) {
+        require(
+            games[_gameId].status == Status.INITIALIZED,
+            "The game isn't in the initialization process !"
+        );
+        _;
+    }
+
+    modifier gameIsOngoing(uint256 _gameId) {
+        require(
+            games[_gameId].status == Status.ONGOING,
+            "The game isn't ongoing !"
+        );
+        _;
+    }
+
+    modifier gameIsFinished(uint256 _gameId) {
+        require(
+            games[_gameId].status == Status.FINISHED,
+            "The current game isn't finished !"
+        );
         _;
     }
 
@@ -86,7 +110,7 @@ contract Pendu {
         game.challenger = _player2Addr;
         game.lowerLimit = _lowerLimit;
         game.upperLimit = _upperLimit;
-        game.status = Status.ONGOING;
+        game.status = Status.INITIALIZED;
         game.randomNumber = generateRandomNumber(
             gameCount,
             _lowerLimit,
@@ -106,12 +130,16 @@ contract Pendu {
         return randomNumber;
     }
 
-
     function updateGameIntervals(
         uint256 _gameId,
         uint256 _newLowerLimit,
         uint256 _newUpperLimit
-    ) public gameExist(_gameId) onlyLauncher(_gameId) {
+    )
+        public
+        gameExist(_gameId)
+        onlyLauncher(_gameId)
+        gameIsInitialized(_gameId)
+    {
         games[_gameId].lowerLimit = _newLowerLimit;
         games[_gameId].upperLimit = _newUpperLimit;
         games[_gameId].randomNumber = generateRandomNumber(
@@ -125,18 +153,19 @@ contract Pendu {
         public
         gameExist(_gameId)
         onlyLauncher(_gameId)
+        gameIsInitialized(_gameId)
     {
         require(_newAmount > 0, "The amount should be greater than 0");
         games[_gameId].amountToBet = _newAmount;
     }
 
-    
     //The users should pay before playing
     function payToPlay(uint256 _gameId)
         public
         payable
         gameExist(_gameId)
         onlyPlayer(_gameId)
+        gameIsInitialized(_gameId)
     {
         uint256 amountToBetInGwei = games[_gameId].amountToBet * (10**18);
         require(
@@ -148,27 +177,45 @@ contract Pendu {
             )
         );
         playerHasPaid[msg.sender][_gameId] = true;
+        if (bothPlayersPaid(_gameId)) games[_gameId].status = Status.ONGOING;
     }
 
+    function bothPlayersPaid(uint256 _gameId) public view returns (bool) {
+        address launcher = games[_gameId].launcher;
+        address challenger = games[_gameId].challenger;
+        if (
+            playerHasPaid[launcher][_gameId] == true &&
+            playerHasPaid[challenger][_gameId] == true
+        ) return true;
+        else return false;
+    }
 
     function guessTheCorrectNumber(uint256 _gameId, uint256 _guessedNumber)
         public
         payable
         gameExist(_gameId)
         onlyPlayer(_gameId)
+        gameIsOngoing(_gameId)
         returns (string memory)
     {
         require(
-            playerHasPaid[msg.sender][_gameId] == true,
-            "You should send your betting amount before playing"
+            currentGamePlayer[_gameId] ==
+                0x0000000000000000000000000000000000000000 ||
+                currentGamePlayer[_gameId] == msg.sender,
+            "It's not your turn to play"
         );
-        require(games[_gameId].status == Status.ONGOING, "The game has ended");
         require(
             _guessedNumber >= games[_gameId].lowerLimit &&
                 _guessedNumber <= games[_gameId].upperLimit,
             "The number is out of limits"
         );
 
+        // Setting the next user to play
+        if (msg.sender == games[_gameId].launcher)
+            currentGamePlayer[_gameId] = games[_gameId].challenger;
+        else currentGamePlayer[_gameId] = games[_gameId].launcher;
+
+        // Verifying if the number provided by the player is the correct one
         if (_guessedNumber > games[_gameId].randomNumber)
             return "Your number is too great";
         else if (_guessedNumber < games[_gameId].randomNumber)
@@ -193,6 +240,7 @@ contract Pendu {
         public
         gameExist(_gameId)
         onlyLauncher(_gameId)
+        gameIsFinished(_gameId)
     {
         newGame(
             games[_gameId].challenger,
@@ -203,6 +251,7 @@ contract Pendu {
     }
 
     // In case the player send tokens by accident
+    mapping(address => uint256) balance;
 
     receive() external payable {
         balance[msg.sender] += msg.value;
@@ -220,7 +269,7 @@ contract Pendu {
 // permettre aux joeurs de recommencer la partie OK
 // Permettre aux joeurs de mettre des tokens en jeu qui seront sauvegardés par le smart contract et transférés au gagnant OK
 // Ajout des contrôles d'accès - OK
-// Faire en sorte que les joeurs doivent jouer l'un après l'autre
+// Faire en sorte que les joeurs doivent jouer l'un après l'autre OK
 // Rendre le nombre réellement aléatoire grâce aux oracles
 // Améliorer ce que la fonction guess retourne.
 // Gestion d'erreurs
