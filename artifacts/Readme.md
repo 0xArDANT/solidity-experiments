@@ -1,0 +1,1 @@
+This repo contains some code I'm experimenting with in order to learn solidity !
