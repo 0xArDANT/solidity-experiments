@@ -18,17 +18,11 @@ contract Pendu {
         uint256 lowerLimit;
         uint256 upperLimit;
         uint256 randomNumber;
-        Status status;
+        GameStatus status;
         Winner winner;
     }
 
-    mapping(address => string) players;
-    mapping(uint256 => Game) public games;
-    mapping(uint256 => bool) isGame;
-    mapping(address => mapping(uint256 => bool)) playerHasPaid;
-    mapping(uint256 => address) currentGamePlayer;
-
-    enum Status {
+    enum GameStatus {
         INITIALIZED,
         ONGOING,
         FINISHED
@@ -39,35 +33,61 @@ contract Pendu {
         CHALLENGER
     }
 
+    enum NumberStatus {
+        SMALLER,
+        EQUAL,
+        GREATER
+    }
+
+    mapping(address => string) players;
+    mapping(uint256 => Game) public games;
+    mapping(uint256 => bool) isGame;
+    mapping(address => mapping(uint256 => bool)) playerHasPaid;
+    mapping(uint256 => address) currentGamePlayer;
+
+    event newGameEvent(uint256);
+    event gameIntervalsUpdatedEvent(uint256, uint256, uint256, uint256);
+    event gameAmountUpdatedEvent(uint256, uint256);
+    event playerPaidEvent(address, uint256);
+    event gameStatusUpdatedEvent(uint256, GameStatus);
+    event newGuessedNumberEvent(address, uint256, NumberStatus);
+
+    // Here come the modifiers
+
+    //Used to make sure a game exists
     modifier gameExist(uint256 _gameId) {
         require(isGame[_gameId], "The game doesn't exist !");
         _;
     }
 
+    // Verify if the game is in the "Initialization Phase" where players didn't start playing yet.
     modifier gameIsInitialized(uint256 _gameId) {
         require(
-            games[_gameId].status == Status.INITIALIZED,
+            games[_gameId].status == GameStatus.INITIALIZED,
             "The game isn't in the initialization process !"
         );
         _;
     }
 
+    // Verify if the game is ongoing, meaning at least one of the players played.
     modifier gameIsOngoing(uint256 _gameId) {
         require(
-            games[_gameId].status == Status.ONGOING,
+            games[_gameId].status == GameStatus.ONGOING,
             "The game isn't ongoing !"
         );
         _;
     }
 
+    // Verify if the game is finished
     modifier gameIsFinished(uint256 _gameId) {
         require(
-            games[_gameId].status == Status.FINISHED,
+            games[_gameId].status == GameStatus.FINISHED,
             "The current game isn't finished !"
         );
         _;
     }
 
+    // Verify it's the game's launcher
     modifier onlyLauncher(uint256 _gameId) {
         require(
             games[_gameId].launcher == msg.sender,
@@ -76,6 +96,7 @@ contract Pendu {
         _;
     }
 
+    // Verify it's one of the two game's players
     modifier onlyPlayer(uint256 _gameId) {
         require(
             msg.sender == games[_gameId].launcher ||
@@ -90,6 +111,7 @@ contract Pendu {
         players[msg.sender] = _playerName;
     }
 
+    // Create and intitialize a new game
     function newGame(
         address _player2Addr,
         uint256 _amountToBet,
@@ -110,19 +132,26 @@ contract Pendu {
         game.challenger = _player2Addr;
         game.lowerLimit = _lowerLimit;
         game.upperLimit = _upperLimit;
-        game.status = Status.INITIALIZED;
+        game.status = GameStatus.INITIALIZED;
         game.randomNumber = generateRandomNumber(
             gameCount,
             _lowerLimit,
             _upperLimit
         );
+
+        emit newGameEvent(gameCount);
     }
 
+    // Generate a "pseudo" random number between a lower and an upper limit
     function generateRandomNumber(
         uint256 _gameId,
         uint256 _lowerLimit,
         uint256 _upperLimit
     ) internal view gameExist(_gameId) returns (uint256) {
+        // Let's ensure the number is between the lower and the upper limit
+        // The modulo of the generated number divided by (upper - lower + 1) will produce a number less than or equal their difference
+        // Then adding this number to lowerLimit ensure the final will be at least the lower and at most the upper number.
+
         uint256 randomNumber = (uint256(
             keccak256(abi.encodePacked(block.timestamp, msg.sender, _gameId))
         ) % (_upperLimit - _lowerLimit + 1)) + _lowerLimit;
@@ -130,6 +159,7 @@ contract Pendu {
         return randomNumber;
     }
 
+    // The launcher of the game can update the intervals as long as no one played yet
     function updateGameIntervals(
         uint256 _gameId,
         uint256 _newLowerLimit,
@@ -147,8 +177,16 @@ contract Pendu {
             _newLowerLimit,
             _newUpperLimit
         );
+
+        emit gameIntervalsUpdatedEvent(
+            _gameId,
+            _newLowerLimit,
+            _newUpperLimit,
+            games[_gameId].randomNumber
+        );
     }
 
+    // The launcher of the game can update the amount to bet as long as no one played yet
     function updateAmountToBet(uint256 _gameId, uint256 _newAmount)
         public
         gameExist(_gameId)
@@ -157,6 +195,8 @@ contract Pendu {
     {
         require(_newAmount > 0, "The amount should be greater than 0");
         games[_gameId].amountToBet = _newAmount;
+
+        emit gameAmountUpdatedEvent(_gameId, _newAmount);
     }
 
     //The users should pay before playing
@@ -177,9 +217,16 @@ contract Pendu {
             )
         );
         playerHasPaid[msg.sender][_gameId] = true;
-        if (bothPlayersPaid(_gameId)) games[_gameId].status = Status.ONGOING;
+
+        if (bothPlayersPaid(_gameId)) {
+            games[_gameId].status = GameStatus.ONGOING;
+            emit gameStatusUpdatedEvent(_gameId, games[_gameId].status);
+        }
+
+        emit playerPaidEvent(msg.sender, _gameId);
     }
 
+    // Verify if both players of a game paid the betting amount
     function bothPlayersPaid(uint256 _gameId) public view returns (bool) {
         address launcher = games[_gameId].launcher;
         address challenger = games[_gameId].challenger;
@@ -190,13 +237,14 @@ contract Pendu {
         else return false;
     }
 
+    // The players try to guess the correct number randomly generated.
     function guessTheCorrectNumber(uint256 _gameId, uint256 _guessedNumber)
         public
         payable
         gameExist(_gameId)
         onlyPlayer(_gameId)
         gameIsOngoing(_gameId)
-        returns (string memory)
+        returns (NumberStatus)
     {
         require(
             currentGamePlayer[_gameId] ==
@@ -216,11 +264,23 @@ contract Pendu {
         else currentGamePlayer[_gameId] = games[_gameId].launcher;
 
         // Verifying if the number provided by the player is the correct one
-        if (_guessedNumber > games[_gameId].randomNumber)
-            return "Your number is too great";
-        else if (_guessedNumber < games[_gameId].randomNumber)
-            return "Your number is too small";
-        else {
+        if (_guessedNumber > games[_gameId].randomNumber) {
+            emit newGuessedNumberEvent(
+                msg.sender,
+                _gameId,
+                NumberStatus.GREATER
+            );
+            return NumberStatus.GREATER;
+        } else if (_guessedNumber < games[_gameId].randomNumber) {
+            emit newGuessedNumberEvent(
+                msg.sender,
+                _gameId,
+                NumberStatus.SMALLER
+            );
+            return NumberStatus.SMALLER;
+        } else {
+            emit newGuessedNumberEvent(msg.sender, _gameId, NumberStatus.EQUAL);
+
             if (msg.sender == games[_gameId].launcher)
                 games[_gameId].winner = Winner.LAUNCHER;
             else if (msg.sender == games[_gameId].challenger)
@@ -230,12 +290,15 @@ contract Pendu {
             payable(msg.sender).transfer(
                 games[_gameId].amountToBet * (10**18) * 2
             );
-            games[_gameId].status = Status.FINISHED;
+            games[_gameId].status = GameStatus.FINISHED;
 
-            return string.concat("The winner is ", players[msg.sender]);
+            emit gameStatusUpdatedEvent(_gameId, games[_gameId].status);
+
+            return NumberStatus.EQUAL;
         }
     }
 
+    // Launch another base with the current game information, in case the players want to play again.
     function anotherGame(uint256 _gameId)
         public
         gameExist(_gameId)
@@ -250,7 +313,7 @@ contract Pendu {
         );
     }
 
-    // In case the player send tokens by accident
+    // In case the player send tokens by accident to the contract
     mapping(address => uint256) balance;
 
     receive() external payable {
@@ -270,10 +333,11 @@ contract Pendu {
 // Permettre aux joeurs de mettre des tokens en jeu qui seront sauvegardés par le smart contract et transférés au gagnant OK
 // Ajout des contrôles d'accès - OK
 // Faire en sorte que les joeurs doivent jouer l'un après l'autre OK
+// Ajout des évènements pour le frontend OK
+// Améliorer ce que la fonction guess retourne OK
 // Rendre le nombre réellement aléatoire grâce aux oracles
-// Améliorer ce que la fonction guess retourne.
 // Gestion d'erreurs
-// Ajout des évènements pour le frontend
-// Permettre aux joueurs de laisser leurs gains dans le contrat et ne payer pour jouer que si leur balance du contrat est plus petit que le montant à jouer.
+// Ajout d'une interface pour le contrat
+// Permettre aux joueurs de laisser leurs gains dans le contrat et ne payer pour jouer que si leur solde du contrat est plus petit que le montant à jouer.
 // Sécurité du contrat intelligent
 // Permettre le jeu en plusieurs manches
