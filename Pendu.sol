@@ -45,12 +45,12 @@ contract Pendu {
     mapping(address => mapping(uint256 => bool)) playerHasPaid;
     mapping(uint256 => address) currentGamePlayer;
 
-    event newGameEvent(uint256);
-    event gameIntervalsUpdatedEvent(uint256, uint256, uint256, uint256);
-    event gameAmountUpdatedEvent(uint256, uint256);
-    event playerPaidEvent(address, uint256);
-    event gameStatusUpdatedEvent(uint256, GameStatus);
-    event newGuessedNumberEvent(address, uint256, NumberStatus);
+    event NewGameEvent(uint256);
+    event GameIntervalsUpdatedEvent(uint256, uint256, uint256, uint256);
+    event GameAmountUpdatedEvent(uint256, uint256);
+    event PlayerPaidEvent(address, uint256);
+    event GameStatusUpdatedEvent(uint256, GameStatus);
+    event NewGuessedNumberEvent(address, uint256, NumberStatus);
 
     // Here come the modifiers
 
@@ -139,7 +139,7 @@ contract Pendu {
             _upperLimit
         );
 
-        emit newGameEvent(gameCount);
+        emit NewGameEvent(gameCount);
     }
 
     // Generate a "pseudo" random number between a lower and an upper limit
@@ -178,7 +178,7 @@ contract Pendu {
             _newUpperLimit
         );
 
-        emit gameIntervalsUpdatedEvent(
+        emit GameIntervalsUpdatedEvent(
             _gameId,
             _newLowerLimit,
             _newUpperLimit,
@@ -196,7 +196,7 @@ contract Pendu {
         require(_newAmount > 0, "The amount should be greater than 0");
         games[_gameId].amountToBet = _newAmount;
 
-        emit gameAmountUpdatedEvent(_gameId, _newAmount);
+        emit GameAmountUpdatedEvent(_gameId, _newAmount);
     }
 
     //The users should pay before playing
@@ -220,10 +220,10 @@ contract Pendu {
 
         if (bothPlayersPaid(_gameId)) {
             games[_gameId].status = GameStatus.ONGOING;
-            emit gameStatusUpdatedEvent(_gameId, games[_gameId].status);
+            emit GameStatusUpdatedEvent(_gameId, games[_gameId].status);
         }
 
-        emit playerPaidEvent(msg.sender, _gameId);
+        emit PlayerPaidEvent(msg.sender, _gameId);
     }
 
     // Verify if both players of a game paid the betting amount
@@ -265,21 +265,21 @@ contract Pendu {
 
         // Verifying if the number provided by the player is the correct one
         if (_guessedNumber > games[_gameId].randomNumber) {
-            emit newGuessedNumberEvent(
+            emit NewGuessedNumberEvent(
                 msg.sender,
                 _gameId,
                 NumberStatus.GREATER
             );
             return NumberStatus.GREATER;
         } else if (_guessedNumber < games[_gameId].randomNumber) {
-            emit newGuessedNumberEvent(
+            emit NewGuessedNumberEvent(
                 msg.sender,
                 _gameId,
                 NumberStatus.SMALLER
             );
             return NumberStatus.SMALLER;
         } else {
-            emit newGuessedNumberEvent(msg.sender, _gameId, NumberStatus.EQUAL);
+            emit NewGuessedNumberEvent(msg.sender, _gameId, NumberStatus.EQUAL);
 
             if (msg.sender == games[_gameId].launcher)
                 games[_gameId].winner = Winner.LAUNCHER;
@@ -292,7 +292,7 @@ contract Pendu {
             );
             games[_gameId].status = GameStatus.FINISHED;
 
-            emit gameStatusUpdatedEvent(_gameId, games[_gameId].status);
+            emit GameStatusUpdatedEvent(_gameId, games[_gameId].status);
 
             return NumberStatus.EQUAL;
         }
