@@ -8,7 +8,39 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 // 2 Joueurs doivent deviner le nombre aléatoire choisi par le programme
 // Nombre d'essais : illimité
 
-contract Pendu {
+interface IPendu {
+    enum NumberStatus {
+        SMALLER,
+        EQUAL,
+        GREATER
+    }
+
+    function newGame(
+        address,
+        uint256,
+        uint256,
+        uint256
+    ) external;
+
+    function updateGameIntervals(
+        uint256,
+        uint256,
+        uint256
+    ) external;
+
+    function updateAmountToBet(uint256, uint256) external;
+
+    function payToPlay(uint256) external payable;
+
+    function guessTheCorrectNumber(uint256, uint256)
+        external
+        payable
+        returns (NumberStatus);
+
+    function anotherGame(uint256) external;
+}
+
+contract Pendu is IPendu {
     uint256 public gameCount = 0;
 
     struct Game {
@@ -31,12 +63,6 @@ contract Pendu {
     enum Winner {
         LAUNCHER,
         CHALLENGER
-    }
-
-    enum NumberStatus {
-        SMALLER,
-        EQUAL,
-        GREATER
     }
 
     mapping(address => string) players;
@@ -208,6 +234,7 @@ contract Pendu {
         gameIsInitialized(_gameId)
     {
         uint256 amountToBetInGwei = games[_gameId].amountToBet * (10**18);
+        require(playerHasPaid[msg.sender][_gameId] != true, "You already paid");
         require(
             msg.value == amountToBetInGwei,
             string.concat(
@@ -227,7 +254,7 @@ contract Pendu {
     }
 
     // Verify if both players of a game paid the betting amount
-    function bothPlayersPaid(uint256 _gameId) public view returns (bool) {
+    function bothPlayersPaid(uint256 _gameId) internal view returns (bool) {
         address launcher = games[_gameId].launcher;
         address challenger = games[_gameId].challenger;
         if (
@@ -335,9 +362,9 @@ contract Pendu {
 // Faire en sorte que les joeurs doivent jouer l'un après l'autre OK
 // Ajout des évènements pour le frontend OK
 // Améliorer ce que la fonction guess retourne OK
+// Ajout d'une interface pour le contrat OK
 // Rendre le nombre réellement aléatoire grâce aux oracles
 // Gestion d'erreurs
-// Ajout d'une interface pour le contrat
 // Permettre aux joueurs de laisser leurs gains dans le contrat et ne payer pour jouer que si leur solde du contrat est plus petit que le montant à jouer.
 // Sécurité du contrat intelligent
 // Permettre le jeu en plusieurs manches
