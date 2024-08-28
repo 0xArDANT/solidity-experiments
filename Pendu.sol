@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 // Nombre d'essais : illimité
 
 interface IPendu {
+
     enum NumberStatus {
         SMALLER,
         EQUAL,
@@ -38,6 +39,8 @@ interface IPendu {
         returns (NumberStatus);
 
     function anotherGame(uint256) external;
+
+    function setPlayerName(string calldata) external;
 }
 
 contract Pendu is IPendu {
@@ -61,6 +64,7 @@ contract Pendu is IPendu {
     }
 
     enum Winner {
+        NONE,
         LAUNCHER,
         CHALLENGER
     }
@@ -363,7 +367,7 @@ contract Pendu is IPendu {
 // Ajout des évènements pour le frontend OK
 // Améliorer ce que la fonction guess retourne OK
 // Ajout d'une interface pour le contrat OK
-// Rendre le nombre réellement aléatoire grâce aux oracles
+// Rendre le nombre réellement aléatoire grâce aux oracles : 69483838576072029219495071561698310382371810567704335300510833802519375536971
 // Gestion d'erreurs
 // Permettre aux joueurs de laisser leurs gains dans le contrat et ne payer pour jouer que si leur solde du contrat est plus petit que le montant à jouer.
 // Sécurité du contrat intelligent
