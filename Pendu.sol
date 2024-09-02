@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.14;
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "./SubscriptionConsumer.sol";
 
 // Jeu du pendu
 // Intervalle de jeu : customisable
@@ -45,6 +46,8 @@ interface IPendu {
 
 contract Pendu is IPendu {
     uint256 public gameCount = 0;
+
+    SubscriptionConsumer subscriptionContract;
 
     struct Game {
         uint256 amountToBet;
@@ -136,6 +139,10 @@ contract Pendu is IPendu {
         _;
     }
 
+    constructor(address _subscriptionContractAddress ) {
+        subscriptionContract = SubscriptionConsumer(_subscriptionContractAddress);
+    }
+
     // The users must start by setting their name
     function setPlayerName(string memory _playerName) public {
         players[msg.sender] = _playerName;
@@ -177,14 +184,16 @@ contract Pendu is IPendu {
         uint256 _gameId,
         uint256 _lowerLimit,
         uint256 _upperLimit
-    ) internal view gameExist(_gameId) returns (uint256) {
+    ) internal gameExist(_gameId) returns (uint256) {
         // Let's ensure the number is between the lower and the upper limit
         // The modulo of the generated number divided by (upper - lower + 1) will produce a number less than or equal their difference
         // Then adding this number to lowerLimit ensure the final will be at least the lower and at most the upper number.
-
-        uint256 randomNumber = (uint256(
-            keccak256(abi.encodePacked(block.timestamp, msg.sender, _gameId))
-        ) % (_upperLimit - _lowerLimit + 1)) + _lowerLimit;
+        uint256 requestId = subscriptionContract.requestRandomWords(true);
+        uint256[] memory randomNumbers;
+        bool futfilled;
+        (futfilled,randomNumbers) = subscriptionContract.getRequestStatus(requestId);
+        uint256 firstRandomNumber = randomNumbers[0];
+        uint256 randomNumber = ( firstRandomNumber % (_upperLimit - _lowerLimit + 1)) + _lowerLimit;
 
         return randomNumber;
     }
