@@ -3,52 +3,18 @@ pragma solidity >=0.8.14;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "SubscriptionConsumer.sol";
 
-// Jeu du pendu
-// Intervalle de jeu : customisable
-// Les joeurs mettent des tokens en jeu
-// 2 Joueurs doivent deviner le nombre aléatoire choisi par le programme
-// Nombre d'essais : illimité
+/**
+ * @title Pendu (Guessing Game)
+ * @author [0xArDANT]
+ * @notice A simple hangman-style guessing game implemented as a smart contract with Chainlink oracle for number generation.
+ * @dev This contract allows two players to engage in a guessing game with customizable betting amounts and intervals.
+ */
 
-interface IPendu {
-    enum NumberStatus {
-        SMALLER,
-        EQUAL,
-        GREATER
-    }
 
-    function newGame(
-        address,
-        uint256,
-        uint256,
-        uint256
-    ) external;
-
-    function updateGameIntervals(
-        uint256,
-        uint256,
-        uint256
-    ) external;
-
-    function updateAmountToBet(uint256, uint256) external;
-
-    function payToPlay(uint256) external payable;
-
-    function guessTheCorrectNumber(uint256, uint256)
-        external
-        payable
-        returns (NumberStatus);
-
-    function anotherGame(uint256) external;
-
-    function setPlayerName(string calldata) external;
-
-    function generateRandomNumber(uint256 _gameId)
-        external
-        returns (uint256);
-}
-
-contract Pendu is IPendu {
+contract Pendu {
     uint256 public gameCount = 0;
+    SubscriptionConsumer subscriptionConsumer;
+
 
     struct Game {
         uint256 amountToBet;
@@ -59,6 +25,12 @@ contract Pendu is IPendu {
         uint256 randomNumber;
         GameStatus status;
         Winner winner;
+    }
+
+    enum NumberStatus {
+        SMALLER,
+        EQUAL,
+        GREATER
     }
 
     enum GameStatus {
@@ -73,21 +45,18 @@ contract Pendu is IPendu {
         CHALLENGER
     }
 
-    mapping(address => string) players;
-    mapping(uint256 => Game) public games;
-    mapping(uint256 => bool) isGame;
-    mapping(address => mapping(uint256 => bool)) playerHasPaid;
-    mapping(uint256 => address) currentGamePlayer;
-    mapping(uint256 => uint256) gameRequest;
+    mapping(address playerAddress => string playerName) playerName;
+    mapping(uint256 gameId => Game) public games;
+    mapping(uint256 gameId => bool) isGame;
+    mapping(address playerAddress => mapping(uint256 gameId => bool)) playerHasPaid;
+    mapping(uint256 gameId => address currentPlayer) currentGamePlayer;
+    mapping(uint256 gameId => uint256 chainlinkRequestId) gameRequest;
 
-    event NewGameEvent(uint256);
-    event GameIntervalsUpdatedEvent(uint256, uint256, uint256, uint256);
-    event GameAmountUpdatedEvent(uint256, uint256);
-    event PlayerPaidEvent(address, uint256);
-    event GameStatusUpdatedEvent(uint256, GameStatus);
+    event NewGameEvent(uint256 gameId);
+    event GameAmountUpdatedEvent(uint256 gameId, uint256 amount);
+    event PlayerPaidEvent(address playerAddress, uint256 gameId);
+    event GameStatusUpdatedEvent(uint256 gameId, GameStatus);
     event NewGuessedNumberEvent(address, uint256, NumberStatus);
-
-    SubscriptionConsumer subscriptionConsumer;
 
     // Here come the modifiers
 
@@ -151,7 +120,7 @@ contract Pendu is IPendu {
 
     // The users must start by setting their name
     function setPlayerName(string memory _playerName) public {
-        players[msg.sender] = _playerName;
+        playerName[msg.sender] = _playerName;
     }
 
     // Create and intitialize a new game
@@ -203,29 +172,6 @@ contract Pendu is IPendu {
             games[_gameId].lowerLimit;
         games[_gameId].randomNumber = randomNumber;
         return randomNumber;
-    }
-
-    // The launcher of the game can update the intervals as long as no one played yet
-    function updateGameIntervals(
-        uint256 _gameId,
-        uint256 _newLowerLimit,
-        uint256 _newUpperLimit
-    )
-        public
-        gameExist(_gameId)
-        onlyLauncher(_gameId)
-        gameIsInitialized(_gameId)
-    {
-        games[_gameId].lowerLimit = _newLowerLimit;
-        games[_gameId].upperLimit = _newUpperLimit;
-        games[_gameId].randomNumber = generateRandomNumber(_gameId);
-
-        emit GameIntervalsUpdatedEvent(
-            _gameId,
-            _newLowerLimit,
-            _newUpperLimit,
-            games[_gameId].randomNumber
-        );
     }
 
     // The launcher of the game can update the amount to bet as long as no one played yet
@@ -367,17 +313,20 @@ contract Pendu is IPendu {
 }
 
 // Next steps
-// Permettre le jeu à 2 en créant une partie qui prend en compte l'addresse des joueurs - OK
-// Permettre aux joueurs de choisir l'intervalle de jeu - OK
-// permettre aux joeurs de recommencer la partie OK
-// Permettre aux joeurs de mettre des tokens en jeu qui seront sauvegardés par le smart contract et transférés au gagnant OK
-// Ajout des contrôles d'accès - OK
-// Faire en sorte que les joeurs doivent jouer l'un après l'autre OK
-// Ajout des évènements pour le frontend OK
-// Améliorer ce que la fonction guess retourne OK
-// Ajout d'une interface pour le contrat OK
-// Rendre le nombre réellement aléatoire grâce aux oracles : 69483838576072029219495071561698310382371810567704335300510833802519375536971
-// Gestion d'erreurs
-// Permettre aux joueurs de laisser leurs gains dans le contrat et ne payer pour jouer que si leur solde du contrat est plus petit que le montant à jouer.
-// Sécurité du contrat intelligent
-// Permettre le jeu en plusieurs manches
+
+// Allow 2-player mode by creating a game that takes into account the addresses of the players - OK
+// Allow players to choose the game interval - OK
+// Allow players to restart the game - OK
+// Allow players to put tokens in play that will be saved by the smart contract and transferred to the winner - OK
+// Add access controls - OK
+// Ensure that players must take turns playing - OK
+// Add events for the frontend - OK
+// Improve what the guess function returns - OK
+// Add an interface for the contract - OK
+// Make the number truly random using oracles: OK
+// pack the struct game
+// Error handling
+// Correct code formatting
+// Allow players to leave their winnings in the contract and only pay to play if their contract balance is smaller than the amount to play.
+// Smart contract security
+// Allow multi-round gameplay
