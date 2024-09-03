@@ -1,63 +1,53 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.14;
-
-import "./IPendu.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import {VRFConsumerBaseV2Plus} from "@chainlink/contracts@1.2.0/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import {VRFV2PlusClient} from "@chainlink/contracts@1.2.0/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import "SubscriptionConsumer.sol";
 
-// Guessing Game ("Jeu du Pendu" in French)
-// Game intervals : customizable
-// The players bet tokens
-// The program automatically generate a random number (to be guessed by players) using Chainlink oracle. 
-// Number of Attempts : Illimited
+// Jeu du pendu
+// Intervalle de jeu : customisable
+// Les joeurs mettent des tokens en jeu
+// 2 Joueurs doivent deviner le nombre aléatoire choisi par le programme
+// Nombre d'essais : illimité
 
-
-contract Pendu is IPendu, VRFConsumerBaseV2Plus {
-
-    // Attributes to handle requests to Chainlink oracle.
-
-    event RequestSent(uint256 requestId, uint32 numWords);
-    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
-
-    struct RequestStatus {
-        bool fulfilled; // whether the request has been successfully fulfilled
-        bool exists; // whether a requestId exists
-        uint256[] randomWords;
+interface IPendu {
+    enum NumberStatus {
+        SMALLER,
+        EQUAL,
+        GREATER
     }
-    mapping(uint256 => RequestStatus) public s_requests; /* requestId --> requestStatus */
 
-    // Your subscription ID.
-    uint256 public s_subscriptionId;
+    function newGame(
+        address,
+        uint256,
+        uint256,
+        uint256
+    ) external;
 
-    // Past request IDs.
-    uint256[] public requestIds;
-    uint256 public lastRequestId;
+    function updateGameIntervals(
+        uint256,
+        uint256,
+        uint256
+    ) external;
 
-    // The gas lane to use, which specifies the maximum gas price to bump to.
-    // For a list of available gas lanes on each network,
-    // see https://docs.chain.link/docs/vrf/v2-5/supported-networks
-    bytes32 public keyHash =
-        0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
+    function updateAmountToBet(uint256, uint256) external;
 
-    // Depends on the number of requested values that you want sent to the
-    // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
-    // so 100,000 is a safe default for this example contract. Test and adjust
-    // this limit based on the network that you select, the size of the request,
-    // and the processing of the callback request in the fulfillRandomWords()
-    // function.
-    uint32 public callbackGasLimit = 100000;
+    function payToPlay(uint256) external payable;
 
-    // The default is 3, but you can set this higher.
-    uint16 public requestConfirmations = 3;
+    function guessTheCorrectNumber(uint256, uint256)
+        external
+        payable
+        returns (NumberStatus);
 
-    // For this example, retrieve 2 random values in one request.
-    // Cannot exceed VRFCoordinatorV2_5.MAX_NUM_WORDS.
-    uint32 public numWords = 2;
+    function anotherGame(uint256) external;
 
+    function setPlayerName(string calldata) external;
 
-    // Attributes to manage games
+    function generateRandomNumber(uint256 _gameId)
+        external
+        returns (uint256);
+}
 
+contract Pendu is IPendu {
     uint256 public gameCount = 0;
 
     struct Game {
@@ -88,29 +78,18 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
     mapping(uint256 => bool) isGame;
     mapping(address => mapping(uint256 => bool)) playerHasPaid;
     mapping(uint256 => address) currentGamePlayer;
-
-    //Mapping to bind a game to a request ID to chainlink
-    mapping(uint256 => uint256) gameRequests; /* requestId --> gameId */
+    mapping(uint256 => uint256) gameRequest;
 
     event NewGameEvent(uint256);
-    event GameIntervalsUpdatedEvent(uint256, uint256, uint256);
+    event GameIntervalsUpdatedEvent(uint256, uint256, uint256, uint256);
     event GameAmountUpdatedEvent(uint256, uint256);
     event PlayerPaidEvent(address, uint256);
     event GameStatusUpdatedEvent(uint256, GameStatus);
     event NewGuessedNumberEvent(address, uint256, NumberStatus);
 
+    SubscriptionConsumer subscriptionConsumer;
 
-        /**
-     * HARDCODED FOR SEPOLIA
-     * COORDINATOR: 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B
-     */
-    constructor(uint256 subscriptionId)
-        VRFConsumerBaseV2Plus(0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B)
-    {
-        s_subscriptionId = subscriptionId;
-    }
-
-     // Here come the modifiers
+    // Here come the modifiers
 
     //Used to make sure a game exists
     modifier gameExist(uint256 _gameId) {
@@ -164,64 +143,11 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
         _;
     }
 
-    // Assumes the subscription is funded sufficiently.
-    // @param enableNativePayment: Set to `true` to enable payment in native tokens, or
-    // `false` to pay in LINK
-    function requestRandomWords(bool enableNativePayment)
-        internal
-        returns (uint256 requestId)
-    {
-        // Will revert if subscription is not set and funded.
-        requestId = s_vrfCoordinator.requestRandomWords(
-            VRFV2PlusClient.RandomWordsRequest({
-                keyHash: keyHash,
-                subId: s_subscriptionId,
-                requestConfirmations: requestConfirmations,
-                callbackGasLimit: callbackGasLimit,
-                numWords: numWords,
-                extraArgs: VRFV2PlusClient._argsToBytes(
-                    VRFV2PlusClient.ExtraArgsV1({
-                        nativePayment: enableNativePayment
-                    })
-                )
-            })
+    constructor(address _subscriptionConsumerAddress) {
+        subscriptionConsumer = SubscriptionConsumer(
+            _subscriptionConsumerAddress
         );
-        s_requests[requestId] = RequestStatus({
-            randomWords: new uint256[](0),
-            exists: true,
-            fulfilled: false
-        });
-        requestIds.push(requestId);
-        lastRequestId = requestId;
-        emit RequestSent(requestId, numWords);
-        return requestId;
     }
-
-    function fulfillRandomWords(
-        uint256 _requestId,
-        uint256[] calldata _randomWords
-    ) internal override {
-        require(s_requests[_requestId].exists, "request not found");
-        s_requests[_requestId].fulfilled = true;
-        s_requests[_requestId].randomWords = _randomWords;
-        uint256 gameId = gameRequests[_requestId];
-        uint256 randomNumber = (_randomWords[0] %
-            (games[gameId].upperLimit - games[gameId].lowerLimit + 1)) +
-            games[gameId].lowerLimit;
-        games[gameId].randomNumber = randomNumber;
-        emit RequestFulfilled(_requestId, _randomWords);
-    }
-
-    function getRequestStatus(uint256 _requestId)
-        external
-        view
-        returns (bool fulfilled, uint256[] memory randomWords)
-    {
-        require(s_requests[_requestId].exists, "request not found");
-        RequestStatus memory request = s_requests[_requestId];
-        return (request.fulfilled, request.randomWords);
-    }
-
 
     // The users must start by setting their name
     function setPlayerName(string memory _playerName) public {
@@ -251,24 +177,32 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
         game.upperLimit = _upperLimit;
         game.status = GameStatus.INITIALIZED;
 
-        uint256 requestId = generateRandomNumber(gameCount);
-        gameRequests[requestId] = gameCount;
+        uint256 requestId = subscriptionConsumer.requestRandomWords(false);
+        gameRequest[gameCount] = requestId;
 
         emit NewGameEvent(gameCount);
     }
 
     // Generate a "pseudo" random number between a lower and an upper limit
     function generateRandomNumber(uint256 _gameId)
-        internal
+        public
         gameExist(_gameId)
+        onlyLauncher(_gameId)
         returns (uint256)
     {
         // Let's ensure the number is between the lower and the upper limit
         // The modulo of the generated number divided by (upper - lower + 1) will produce a number less than or equal their difference
         // Then adding this number to lowerLimit ensure the final will be at least the lower and at most the upper number.
-        uint256 requestId = requestRandomWords(true);
-        gameRequests[requestId] = _gameId;
-        return requestId;
+        uint256 requestId = gameRequest[_gameId];
+        (bool futfilled, uint256[] memory randomWords) = subscriptionConsumer
+            .getRequestStatus(requestId);
+        require(futfilled, "The random number hasn't been generated yet");
+
+        uint256 randomNumber = (randomWords[0] %
+            (games[_gameId].upperLimit - games[_gameId].lowerLimit + 1)) +
+            games[_gameId].lowerLimit;
+        games[_gameId].randomNumber = randomNumber;
+        return randomNumber;
     }
 
     // The launcher of the game can update the intervals as long as no one played yet
@@ -277,38 +211,39 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
         uint256 _newLowerLimit,
         uint256 _newUpperLimit
     )
-        external
+        public
         gameExist(_gameId)
         onlyLauncher(_gameId)
         gameIsInitialized(_gameId)
     {
         games[_gameId].lowerLimit = _newLowerLimit;
         games[_gameId].upperLimit = _newUpperLimit;
-        uint256 requestId = generateRandomNumber(_gameId);
-        gameRequests[requestId] = _gameId;
+        games[_gameId].randomNumber = generateRandomNumber(_gameId);
 
         emit GameIntervalsUpdatedEvent(
             _gameId,
             _newLowerLimit,
-            _newUpperLimit
+            _newUpperLimit,
+            games[_gameId].randomNumber
         );
     }
 
     // The launcher of the game can update the amount to bet as long as no one played yet
     function updateAmountToBet(uint256 _gameId, uint256 _newAmount)
-        external
+        public
         gameExist(_gameId)
         onlyLauncher(_gameId)
         gameIsInitialized(_gameId)
     {
         require(_newAmount > 0, "The amount should be greater than 0");
         games[_gameId].amountToBet = _newAmount;
+
         emit GameAmountUpdatedEvent(_gameId, _newAmount);
     }
 
     //The users should pay before playing
     function payToPlay(uint256 _gameId)
-        external
+        public
         payable
         gameExist(_gameId)
         onlyPlayer(_gameId)
@@ -317,7 +252,11 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
         require(playerHasPaid[msg.sender][_gameId] != true, "You already paid");
         require(
             msg.value == games[_gameId].amountToBet,
-            "Make sure to send the right amount of ether"
+            string.concat(
+                "Make sure to send the right amount of ether : ",
+                Strings.toString(games[_gameId].amountToBet),
+                " ether"
+            )
         );
         playerHasPaid[msg.sender][_gameId] = true;
 
@@ -342,7 +281,7 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
 
     // The players try to guess the correct number randomly generated.
     function guessTheCorrectNumber(uint256 _gameId, uint256 _guessedNumber)
-        external
+        public
         payable
         gameExist(_gameId)
         onlyPlayer(_gameId)
@@ -390,9 +329,7 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
                 games[_gameId].winner = Winner.CHALLENGER;
 
             //Pay the winner and close the game
-            payable(msg.sender).transfer(
-                games[_gameId].amountToBet * (10**18) * 2
-            );
+            payable(msg.sender).transfer(games[_gameId].amountToBet * 2);
             games[_gameId].status = GameStatus.FINISHED;
 
             emit GameStatusUpdatedEvent(_gameId, games[_gameId].status);
@@ -403,7 +340,7 @@ contract Pendu is IPendu, VRFConsumerBaseV2Plus {
 
     // Launch another base with the current game information, in case the players want to play again.
     function anotherGame(uint256 _gameId)
-        external
+        public
         gameExist(_gameId)
         onlyLauncher(_gameId)
         gameIsFinished(_gameId)
