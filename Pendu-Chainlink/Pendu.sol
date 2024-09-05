@@ -2,7 +2,7 @@
 pragma solidity >=0.8.14;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "SubscriptionConsumer.sol";
+import {SubscriptionConsumer} from "SubscriptionConsumer.sol";
 
 /**
  * @title Pendu (Guessing Game)
