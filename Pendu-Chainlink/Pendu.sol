@@ -2,12 +2,12 @@
 pragma solidity >=0.8.14;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
-import {SubscriptionConsumer} from "SubscriptionConsumer.sol";
+import "SubscriptionConsumer.sol";
 
 /**
  * @title Pendu (Guessing Game)
- * @author [0xArDANT]
- * @notice A simple hangman-style guessing game implemented as a smart contract with Chainlink oracle for number generation.
+ * @author 0xArDANT (https://github.com/0xArDANT)
+ * @notice A simple guessing game implemented as a smart contract with Chainlink oracle for number generation.
  * @dev This contract allows two players to engage in a guessing game with customizable betting amounts and intervals.
  */
 contract Pendu {
@@ -21,6 +21,7 @@ contract Pendu {
                                 IMMUTABLE VARIABLES
     //////////////////////////////////////////////////////////////*/
     SubscriptionConsumer private immutable subscriptionConsumer;
+    address private immutable owner;
 
     /*//////////////////////////////////////////////////////////////
                                 STATE VARIABLES
@@ -86,6 +87,12 @@ contract Pendu {
                                 MODIFIERS
     //////////////////////////////////////////////////////////////*/
 
+    // Verify ownership of the game contract
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
+
     //Used to make sure a game exists
     modifier gameExist(uint256 _gameId) {
         require(isGame[_gameId], "The game doesn't exist !");
@@ -119,11 +126,17 @@ contract Pendu {
 
     constructor(address _subscriptionConsumerAddress) {
         subscriptionConsumer = SubscriptionConsumer(_subscriptionConsumerAddress);
+        owner = msg.sender;
     }
 
     /*//////////////////////////////////////////////////////////////
                                 GAME LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    // After deployment, the owner of this contract must grant it ownership to the Subscription contract
+    function approveOwnershipOfSubscription() external onlyOwner {
+        subscriptionConsumer.acceptOwnership();
+    }
 
     // The users must start by setting their name
     function setPlayerName(string memory _playerName) public {
@@ -305,7 +318,9 @@ contract Pendu {
 // Make the number truly random using oracles: OK
 // pack the struct game - OK
 // Correct code formatting - OK
-// Limit access to the subscrpition consumer contract
+// Give access to the subscrpition consumer contract only to the Pendu contract OK
+// Make the game use my personal token
+// Build a small frontend
 // Error handling
 // Allow players to leave their winnings in the contract and only pay to play if their contract balance is smaller than the amount to play.
 // Smart contract security
