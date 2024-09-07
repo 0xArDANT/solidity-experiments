@@ -306,22 +306,27 @@ contract Pendu {
 
 // TO-DO List
 
-// Allow 2-player mode by creating a game that takes into account the addresses of the players - OK
-// Allow players to choose the game interval - OK
-// Allow players to restart the game - OK
-// Allow players to put tokens in play that will be saved by the smart contract and transferred to the winner - OK
-// Add access controls - OK
-// Ensure that players must take turns playing - OK
-// Add events for the frontend - OK
-// Improve what the guess function returns - OK
-// Add an interface for the contract - OK
-// Make the number truly random using oracles: OK
-// pack the struct game - OK
-// Correct code formatting - OK
-// Give access to the subscrpition consumer contract only to the Pendu contract OK
-// Make the game use my personal token
-// Build a small frontend
-// Error handling
-// Allow players to leave their winnings in the contract and only pay to play if their contract balance is smaller than the amount to play.
-// Smart contract security
-// Allow multi-round gameplay
+/* 
+Allow 2-player mode by creating a game that takes into account the addresses of the players - OK
+Allow players to choose the game interval - OK
+Allow players to restart the game - OK
+Allow players to put tokens in play that will be saved by the smart contract and transferred to the winner - OK
+Add access controls - OK
+Ensure that players must take turns playing - OK
+Add events for the frontend - OK
+Improve what the guess function returns - OK
+Add an interface for the contract - OK
+Make the number truly random using oracles: OK
+pack the struct game - OK
+Correct code formatting - OK
+Give access to the subscrpition consumer contract only to the Pendu contract OK
+Make the game use my personal token
+    - Use a simple token : there's a limit on the number of tokens a player can mint everyday
+    - use an ERC-20 token : with daily limit.
+    - We can only have the token by locking Sepolia ETH
+Build a small frontend
+Error handling
+Allow players to leave their winnings in the contract and only pay to play if their contract balance is smaller than the amount to play.
+Smart contract security
+Allow multi-round gameplay 
+*/
