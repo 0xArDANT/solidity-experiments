@@ -4,6 +4,7 @@ pragma solidity >0.8.14;
 contract Immutable {
 
     uint256 public immutable number = 15;
+    uint256 public constant MAX_SUPPLY = 2_000_000;
 
     constructor(uint256 _num) {
         number = _num;
