@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >0.8.9;
 
-contract DTAToken {
+contract DATToken {
 
     string public name;
     string public symbol;
@@ -18,8 +18,8 @@ contract DTAToken {
     }
 
     constructor() {
-        name = "DTA Token";
-        symbol = "DTA";
+        name = "DAT Token";
+        symbol = "DAT";
         decimals = 18;
 
         owner = msg.sender;
