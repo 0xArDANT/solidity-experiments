@@ -3,6 +3,7 @@ pragma solidity >=0.8.14;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import {SubscriptionConsumer} from "./SubscriptionConsumer.sol";
+import {DATToken} from "./DATToken.sol";
 
 /**
  * @title Pendu (Guessing Game)
@@ -21,6 +22,7 @@ contract Pendu {
                                 IMMUTABLE VARIABLES
     //////////////////////////////////////////////////////////////*/
     SubscriptionConsumer private immutable subscriptionConsumer;
+    DATToken private immutable datToken;
     address private immutable owner;
 
     /*//////////////////////////////////////////////////////////////
@@ -124,8 +126,9 @@ contract Pendu {
                                 CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address _subscriptionConsumerAddress) {
+    constructor(address _subscriptionConsumerAddress, address _datTokenAddress) {
         subscriptionConsumer = SubscriptionConsumer(_subscriptionConsumerAddress);
+        datToken = DATToken(_datTokenAddress);
         owner = msg.sender;
     }
 
@@ -133,9 +136,13 @@ contract Pendu {
                                 GAME LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // After deployment, the owner of this contract must grant it ownership to the Subscription contract
+    // After deployment, this contract will receive ownership from the subscription consumer contract
     function approveOwnershipOfSubscription() external onlyOwner {
         subscriptionConsumer.acceptOwnership();
+    }
+
+    function transferOwnership(address _newOwner) external onlyOwner {
+        subscriptionConsumer.transferOwnership(_newOwner);
     }
 
     // The users must start by setting their name
@@ -182,19 +189,26 @@ contract Pendu {
     //The users should pay before playing
     function payToPlay(uint256 _gameId)
         external
-        payable
         gameExist(_gameId)
         onlyPlayer(_gameId)
         isGameCurrentStatus(_gameId, uint8(GameStatus.INITIALIZED))
     {
         uint8 playerIndex = msg.sender == games[_gameId].launcher ? 0 : 1;
         require(!games[_gameId].playerHasPaid[playerIndex], "You already paid");
+
+        // Sending tokens to the game contract
         require(
-            msg.value == games[_gameId].amountToBet,
-            string.concat(
-                "Make sure to send the right amount of ether : ", Strings.toString(games[_gameId].amountToBet), " ether"
-            )
+            datToken.balanceOf(msg.sender) >= games[_gameId].amountToBet,
+            "You don't have enough funds to play !"
         );
+
+        datToken.approve(address(this), 0);
+        datToken.approve(address(this), games[_gameId].amountToBet);
+        
+        require(
+            datToken.transferFrom(msg.sender, address(this), games[_gameId].amountToBet), "Transfer failed, try again later"
+        );
+
         games[_gameId].playerHasPaid[playerIndex] = true;
 
         if (bothPlayersPaid(_gameId)) {
@@ -248,7 +262,15 @@ contract Pendu {
             }
 
             //Pay the winner and close the game
-            payable(msg.sender).transfer(games[_gameId].amountToBet * 2);
+            require(
+                datToken.balanceOf(address(this)) >= games[_gameId].amountToBet * 2, 
+                "Not enough funds in the contract"
+                );
+            require(
+                datToken.transfer(msg.sender, games[_gameId].amountToBet * 2),
+                "Transfer failed, try again later !"
+            );
+
             games[_gameId].status = uint8(GameStatus.FINISHED);
 
             emit GameStatusUpdatedEvent(_gameId, games[_gameId].status);
@@ -320,6 +342,7 @@ Make the number truly random using oracles: OK
 pack the struct game - OK
 Correct code formatting - OK
 Give access to the subscrpition consumer contract only to the Pendu contract OK
+Solve the pay to play function
 Make the game use my personal token
     1. Use a simple token : there's a limit on the number of tokens a player can mint everyday
     2. use an ERC-20 token : with daily limit.
