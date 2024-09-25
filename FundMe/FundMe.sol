@@ -33,7 +33,7 @@ contract FundMe {
     function fund() external payable {
         require(msg.value > 0, AmountTooSmall());
         uint256 amountToFund = msg.value.getConversionRate(priceFeedAddress);
-        require(amountToFund >= minAmountToFundInUSD, AmountTooSmall());
+        require(msg.value.getConversionRate(priceFeedAddress) >= minAmountToFundInUSD, AmountTooSmall());
         fundingsInUSD[msg.sender] += amountToFund;
     }
 
